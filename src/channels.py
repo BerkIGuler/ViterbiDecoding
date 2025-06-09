@@ -33,7 +33,8 @@ class BSC:
         noise = np.random.normal(0, self.noise_std, len(symbols))
         return symbols + noise
 
-    def hard_decision(self, noisy_symbols):
+    @staticmethod
+    def hard_decision(noisy_symbols):
         """
         Make hard decisions on noisy symbols.
         Decision threshold is 0 (midpoint between -a and +a).
@@ -70,3 +71,54 @@ class BSC:
             'noise_power': self.noise_power,
             'noise_std': self.noise_std
         }
+
+
+class BSCProbabilityChannel:
+    """
+    Binary Symmetric Channel with specified bit error probability.
+    """
+
+    def __init__(self, bit_error_prob):
+        """
+        Initialize BSC with bit error probability.
+
+        Parameters:
+        bit_error_prob (float): Probability of bit flip (0 <= p <= 0.5)
+        """
+        self.bit_error_prob = bit_error_prob
+        if bit_error_prob < 0 or bit_error_prob > 0.5:
+            raise ValueError("Bit error probability must be between 0 and 0.5")
+
+    def transmit(self, input_bits):
+        """
+        Transmit bits through BSC with specified error probability.
+
+        Parameters:
+        input_bits (list): Input bits to transmit
+
+        Returns:
+        list: Received bits (some may be flipped)
+        """
+        received_bits = []
+        for bit in input_bits:
+            if np.random.random() < self.bit_error_prob:
+                received_bits.append(1 - bit)  # Flip
+            else:
+                received_bits.append(bit)
+
+        return received_bits
+
+    def get_channel_info(self):
+        """Return channel parameters."""
+        return {
+            'type': 'Binary Symmetric Channel',
+            'bit_error_probability': self.bit_error_prob,
+            'channel_capacity': 1 - self._binary_entropy(self.bit_error_prob)
+        }
+
+    @staticmethod
+    def _binary_entropy(p):
+        """Calculate binary entropy H(p) = -p*log2(p) - (1-p)*log2(1-p)"""
+        if p == 0 or p == 1:
+            return 0
+        return -p * np.log2(p) - (1 - p) * np.log2(1 - p)
