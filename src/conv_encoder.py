@@ -91,29 +91,3 @@ class ConvolutionalEncoder:
     def get_total_encoded_length(self):
         """Return the total length of encoded sequence including termination"""
         return (self.block_length + self.memory_length) * self.rate_n
-
-
-# testing
-if __name__ == "__main__":
-    # Create encoder for block length of 8 bits
-    encoder = ConvolutionalEncoder(block_length=8)
-
-    print(f"Code parameters (n,k,m): {encoder.get_code_parameters()}")
-    print(f"Total encoded length for block_length={encoder.block_length}: {encoder.get_total_encoded_length()}")
-
-    # Test with a simple sequence
-    info_bits = [1, 0, 1, 1, 0, 0, 1, 0]
-    print(f"\nInformation bits: {info_bits}")
-    print(f"Termination bits appended: [0, 0, 0, 0]")
-    print(f"Total input sequence: {info_bits + [0, 0, 0, 0]}")
-
-    encoded = encoder.encode(info_bits)
-    print(f"Encoded bits: {encoded}")
-    print(f"Encoded length: {len(encoded)}")
-
-    # Verify the rate
-    expected_length = (len(info_bits) + encoder.memory_length) * encoder.rate_n
-    print(f"Expected length: {expected_length}")
-    print(f"Rate check: {len(info_bits)} info bits -> {len(encoded)} encoded bits")
-    print(
-        f"Note: During decoding, we'll discard the last {encoder.memory_length * encoder.rate_n} bits (termination bits)")
