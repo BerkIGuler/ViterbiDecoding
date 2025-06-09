@@ -101,11 +101,10 @@ class BSCProbabilityChannel:
         """
         received_bits = []
         for bit in input_bits:
-            # Flip bit with probability p
             if np.random.random() < self.bit_error_prob:
                 received_bits.append(1 - bit)  # Flip
             else:
-                received_bits.append(bit)  # No error
+                received_bits.append(bit)
 
         return received_bits
 
@@ -117,7 +116,8 @@ class BSCProbabilityChannel:
             'channel_capacity': 1 - self._binary_entropy(self.bit_error_prob)
         }
 
-    def _binary_entropy(self, p):
+    @staticmethod
+    def _binary_entropy(p):
         """Calculate binary entropy H(p) = -p*log2(p) - (1-p)*log2(1-p)"""
         if p == 0 or p == 1:
             return 0

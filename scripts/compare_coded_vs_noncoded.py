@@ -15,15 +15,12 @@ def simulate_noncoded_transmission(data_bits, snr_db, amplitude=1.0):
     Returns:
     tuple: (transmitted_bits, received_bits, ber)
     """
-    # Modulate
     modulator = PAMModulator(amplitude=amplitude)
     symbols = modulator.modulate(data_bits)
 
-    # Transmit through channel
     channel = BSC(snr_db=snr_db, amplitude=amplitude)
     _, received_bits = channel.transmit(symbols)
 
-    # Calculate BER
     errors = np.sum(np.array(data_bits) != np.array(received_bits))
     ber = errors / len(data_bits)
 
@@ -39,27 +36,21 @@ def simulate_coded_transmission(data_bits, snr_db, amplitude=1.0):
     """
     block_length = len(data_bits)
 
-    # Convert numpy array to list if necessary
     if isinstance(data_bits, np.ndarray):
         data_bits = data_bits.tolist()
 
-    # Encode
     encoder = ConvolutionalEncoder(block_length)
     encoded_bits = encoder.encode(data_bits)
 
-    # Modulate
     modulator = PAMModulator(amplitude=amplitude)
     symbols = modulator.modulate(encoded_bits)
 
-    # Transmit through channel
     channel = BSC(snr_db=snr_db, amplitude=amplitude)
     _, received_coded_bits = channel.transmit(symbols)
 
-    # Decode with Viterbi
     decoder = ViterbiDecoder(block_length)
     decoded_bits = decoder.decode(received_coded_bits)
 
-    # Calculate BER
     errors = np.sum(np.array(data_bits) != np.array(decoded_bits))
     ber = errors / len(data_bits)
 
@@ -95,36 +86,30 @@ def run_ber_comparison(snr_values, num_trials=10, bits_per_trial=1000, amplitude
     for snr_db in snr_values:
         print(f"Testing SNR = {snr_db:2d} dB...", end=" ")
 
-        # Collect results for this SNR
         noncoded_errors = 0
         coded_errors = 0
         total_bits = 0
 
         for trial in range(num_trials):
-            # Generate random data for this trial
             data_bits = source.generate(bits_per_trial)
             total_bits += len(data_bits)
 
-            # Non-coded transmission
             _, received_noncoded, _ = simulate_noncoded_transmission(
                 data_bits, snr_db, amplitude
             )
             noncoded_errors += np.sum(np.array(data_bits) != np.array(received_noncoded))
 
-            # Coded transmission
             _, decoded_bits, _ = simulate_coded_transmission(
                 data_bits, snr_db, amplitude
             )
             coded_errors += np.sum(np.array(data_bits) != np.array(decoded_bits))
 
-        # Calculate average BER for this SNR
         noncoded_ber = noncoded_errors / total_bits
         coded_ber = coded_errors / total_bits
 
         noncoded_ber_results.append(noncoded_ber)
         coded_ber_results.append(coded_ber)
 
-        # Calculate coding gain
         if noncoded_ber > 0 and coded_ber > 0:
             coding_gain = 10 * np.log10(noncoded_ber / coded_ber)
             print(f"Non-coded: {noncoded_ber:.6f}, Coded: {coded_ber:.6f}, Gain: {coding_gain:.1f} dB")
@@ -142,13 +127,11 @@ def plot_ber_comparison(snr_values, noncoded_ber, coded_ber, save_plot=True):
     """
     plt.figure(figsize=(10, 6))
 
-    # Plot BER curves
     plt.semilogy(snr_values, noncoded_ber, 'ro-', linewidth=2, markersize=8,
                  label='Non-Coded (Basic Thresholding)', markerfacecolor='white', markeredgewidth=2)
     plt.semilogy(snr_values, coded_ber, 'bs-', linewidth=2, markersize=8,
                  label='Coded (Convolutional + Viterbi)', markerfacecolor='white', markeredgewidth=2)
 
-    # Formatting
     plt.grid(True, which="both", ls="-", alpha=0.3)
     plt.xlabel('Signal-to-Noise Ratio (SNR) [dB]', fontsize=12, fontweight='bold')
     plt.ylabel('Bit Error Rate (BER)', fontsize=12, fontweight='bold')
@@ -156,7 +139,6 @@ def plot_ber_comparison(snr_values, noncoded_ber, coded_ber, save_plot=True):
               fontsize=14, fontweight='bold')
     plt.legend(fontsize=12, loc='upper right')
 
-    # Set axis limits for better visibility
     plt.xlim(min(snr_values) - 0.5, max(snr_values) + 0.5)
     plt.ylim(1e-5, 1)
 
@@ -173,14 +155,10 @@ def main():
     """
     Main function to run the complete BER comparison.
     """
-    print("=" * 70)
-    print("BER COMPARISON: CODED VS NON-CODED TRANSMISSION")
-    print("=" * 70)
-
     # Simulation parameters
-    snr_values = np.arange(-6, 10, 2)  # 0, 2, 4, 6, 8, 10, 12, 14 dB
-    num_trials = 25  # Number of Monte Carlo trials
-    bits_per_trial = 10000  # Information bits per trial
+    snr_values = np.arange(-6, 10, 2)
+    num_trials = 25
+    bits_per_trial = 10000
     amplitude = 1.0
 
     print(f"SNR range: {min(snr_values)} to {max(snr_values)} dB")
@@ -190,7 +168,6 @@ def main():
     print(f"Decoding: Viterbi Algorithm (Hard Decision)")
     print()
 
-    # Run simulation
     snr_db, noncoded_ber, coded_ber = run_ber_comparison(
         snr_values=snr_values,
         num_trials=num_trials,
@@ -199,7 +176,6 @@ def main():
         seed=42
     )
 
-    # Display summary
     print("\n" + "=" * 60)
     print("SUMMARY RESULTS")
     print("=" * 60)
@@ -217,10 +193,8 @@ def main():
 
         print(f"{snr:<8} {nc_ber:<15.6f} {c_ber:<15.6f} {gain_str:<15}")
 
-    # Create and show plot
     plot_ber_comparison(snr_db, noncoded_ber, coded_ber)
 
-    # Performance summary
     print(f"\n" + "=" * 60)
     print("PERFORMANCE ANALYSIS")
     print("=" * 60)

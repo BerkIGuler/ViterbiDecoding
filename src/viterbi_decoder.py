@@ -29,7 +29,6 @@ class ViterbiDecoder:
         Build the trellis structure by computing all state transitions
         and their corresponding output symbols.
         """
-        # For each state and input bit, compute next state and output
         self.next_state = np.zeros((self.num_states, 2), dtype=int)
         self.output_symbols = np.zeros((self.num_states, 2, self.rate_n), dtype=int)
 
@@ -47,9 +46,8 @@ class ViterbiDecoder:
                         output_bit ^= (current_state[i] & generator[i])
                     output.append(output_bit)
 
-                # update shift registers
                 next_state_bits = [input_bit] + state_bits[:-1]
-                # compute next state in dec
+                # compute next state in decimal
                 next_state = 0
                 for i, bit in enumerate(next_state_bits):
                     next_state += bit * (2 ** (self.memory_length - 1 - i))
@@ -71,62 +69,84 @@ class ViterbiDecoder:
         """
         return int(np.sum(received != expected))
 
-    def decode(self, received_symbols):
+    @staticmethod
+    def _hamming_distance_punctured(received, expected):
+        """
+        Compute Hamming distance between received and expected symbols,
+        skipping positions where received[i] is None (punctured positions).
+
+        Parameters:
+        received (list or numpy.ndarray): Received symbols (4 bits, some may be None)
+        expected (numpy.ndarray): Expected symbols (4 bits)
+
+        Returns:
+        int: Hamming distance considering only non-punctured positions
+        """
+        distance = 0
+        for i in range(len(received)):
+            if received[i] is not None:  # Skip punctured positions
+                if int(received[i]) != int(expected[i]):
+                    distance += 1
+        return distance
+
+    def decode(self, received_symbols, use_punctured=False):
         """
         Decode received symbols using Viterbi algorithm.
 
         Parameters:
         received_symbols (list or numpy.ndarray): Received coded symbols
+        use_punctured (bool): If True, use punctured decoding (skip None values)
 
         Returns:
         numpy.ndarray: Decoded information bits
         """
-        received_symbols = np.array(received_symbols)
-
-        # Calculate total number of time steps (including termination)
         total_symbols = len(received_symbols)
         if total_symbols % self.rate_n != 0:
             raise ValueError(f"Received symbols length must be multiple of {self.rate_n}")
 
         time_steps = total_symbols // self.rate_n
-        received_blocks = received_symbols.reshape(time_steps, self.rate_n)
 
-        # Initialize path metrics and survivor paths
-        # path_metrics[t][state] = cumulative metric to state at time t
+        if use_punctured:
+            received_blocks = []
+            for t in range(time_steps):
+                start_idx = t * self.rate_n
+                end_idx = start_idx + self.rate_n
+                received_blocks.append(received_symbols[start_idx:end_idx])
+        else:
+            received_symbols = np.array(received_symbols)
+            received_blocks = received_symbols.reshape(time_steps, self.rate_n)
+
+
         path_metrics = np.full((time_steps + 1, self.num_states), np.inf)
         path_metrics[0, 0] = 0  # Start from state 0
 
-        # survivor_paths[t][state] = (previous_state, input_bit)
-        # memory for backtracking
         survivor_paths = np.zeros((time_steps, self.num_states, 2), dtype=int)
 
-        # Forward pass: compute path metrics
         for t in range(time_steps):
             received_block = received_blocks[t]
 
             for current_state in range(self.num_states):
                 if path_metrics[t, current_state] == np.inf:
-                    continue  # Skip unreachable states
+                    continue
 
                 # Try both possible input bits
                 for input_bit in [0, 1]:
                     next_state = self.next_state[current_state, input_bit]
                     expected_output = self.output_symbols[current_state, input_bit]
 
-                    # Compute branch metric (Hamming distance)
-                    branch_metric = self._hamming_distance(received_block, expected_output)
+                    if use_punctured:
+                        branch_metric = self._hamming_distance_punctured(received_block, expected_output)
+                    else:
+                        branch_metric = self._hamming_distance(received_block, expected_output)
+
                     new_metric = path_metrics[t, current_state] + branch_metric
 
-                    # Update if this path is better
                     if new_metric < path_metrics[t + 1, next_state]:
                         path_metrics[t + 1, next_state] = new_metric
                         survivor_paths[t, next_state] = [current_state, input_bit]
 
-        # Backward pass: trace back the best path
-        # Find the final state with minimum metric
         final_state = int(np.argmin(path_metrics[time_steps]))
 
-        # Trace back to recover the information bits
         decoded_bits = []
         current_state = final_state
 
@@ -135,7 +155,6 @@ class ViterbiDecoder:
             decoded_bits.append(int(input_bit))
             current_state = int(prev_state)
 
-        # Reverse to get correct order
         decoded_bits.reverse()
 
         # Remove termination bits (last m bits)

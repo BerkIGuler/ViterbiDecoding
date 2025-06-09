@@ -32,9 +32,8 @@ def apply_puncturing(encoded_bits, puncturing_matrix):
     list: Punctured bits (with some bits removed)
     """
     n_generators = 4
-    period = puncturing_matrix.shape[1]  # 8
+    period = puncturing_matrix.shape[1]
 
-    # Reshape into time steps of 4 bits each
     total_time_steps = len(encoded_bits) // n_generators
     encoded_blocks = np.array(encoded_bits).reshape(total_time_steps, n_generators)
 
@@ -44,7 +43,6 @@ def apply_puncturing(encoded_bits, puncturing_matrix):
         time_index = t % period  # Cycle through puncturing pattern
         block = encoded_blocks[t]
 
-        # For each generator, check if bit should be kept
         for gen_idx in range(n_generators):
             if puncturing_matrix[gen_idx, time_index] == 1:
                 punctured_bits.append(block[gen_idx])
@@ -75,14 +73,12 @@ def insert_erasures(received_punctured_bits, puncturing_matrix, total_time_steps
 
         for gen_idx in range(n_generators):
             if puncturing_matrix[gen_idx, time_index] == 1:
-                # Bit was transmitted - use received bit
+                # use received bit
                 if punctured_index < len(received_punctured_bits):
                     depunctured_bits.append(received_punctured_bits[punctured_index])
                     punctured_index += 1
-                else:
-                    depunctured_bits.append(0)  # Default if we run out
             else:
-                # Bit was punctured - insert erasure (neutral value)
-                depunctured_bits.append(0)  # Erasure symbol
+                # insert erasure = None
+                depunctured_bits.append(None)
 
     return depunctured_bits

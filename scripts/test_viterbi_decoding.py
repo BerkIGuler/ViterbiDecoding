@@ -9,7 +9,6 @@ def main():
     block_length = 8
     test_data = [1, 0, 1, 1, 0, 0, 1, 0]
 
-    # Encode
     encoder = ConvolutionalEncoder(block_length)
     encoded_bits = encoder.encode(test_data)
 
@@ -23,7 +22,6 @@ def main():
     print(f"Decoded bits:     {list(decoded_bits)}")
     print(f"Decoding correct: {np.array_equal(test_data, decoded_bits)}")
 
-    # Test with single bit error
     print(f"\n=== Test with Single Bit Error ===")
     corrupted_bits = encoded_bits.copy()
     corrupted_bits[5] = 1 - corrupted_bits[5]  # Flip bit at position 5
@@ -39,7 +37,6 @@ def main():
     for key, value in trellis_info.items():
         print(f"{key}: {value}")
 
-    # Test error correction capability
     print(f"\n=== Error Correction Test ===")
     num_tests = 10
     max_correctable_errors = 0

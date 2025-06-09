@@ -38,11 +38,9 @@ class ConvolutionalEncoder:
         """
         current_state = [input_bit] + self.shift_register
 
-        # Generate output bits using each generator
         output_bits = []
         for generator in self.generators:
             output_bit = 0
-            # Compute convolution for this generator
             for i in range(len(generator)):
                 # & is bitwise AND,
                 # ^ is bit-wise XOR in Python
@@ -68,16 +66,14 @@ class ConvolutionalEncoder:
         if len(information_bits) != self.block_length:
             raise ValueError(f"Expected {self.block_length} information bits, got {len(information_bits)}")
 
-        # Reset encoder state
         self.reset()
 
-        # Append termination bits (m zeros) to input sequence
+        # Append termination bits to input sequence
         termination_bits = [0] * self.memory_length  # [0, 0, 0, 0]
         extended_input = information_bits + termination_bits
 
         encoded_bits = []
 
-        # Encode all bits (information + termination)
         for bit in extended_input:
             output_bits = self.encode_bit(bit)
             encoded_bits.extend(output_bits)
